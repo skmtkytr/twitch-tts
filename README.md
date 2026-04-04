@@ -1,16 +1,58 @@
-# README
+# Twitch TTS
 
-## About
+Twitch チャットを VOICEVOX で読み上げるデスクトップアプリ。
+Wails (Go + Svelte) で構築。OBS 配信にそのまま音声を乗せられる。
 
-This is the official Wails Svelte template.
+## Features
 
-## Live Development
+- Twitch チャットのリアルタイム表示と読み上げ
+- VOICEVOX のキャラクター/スタイル選択
+- 発言者名の読み上げ ON/OFF、敬称の設定
+- TTS ON/OFF トグル
+- OBS 用の仮想オーディオシンク自動作成 + ループバック
+- 設定の自動保存・復元
 
-To run in live development mode, run `wails dev` in the project directory. This will run a Vite development
-server that will provide very fast hot reload of your frontend changes. If you want to develop in a browser
-and have access to your Go methods, there is also a dev server that runs on http://localhost:34115. Connect
-to this in your browser, and you can call your Go code from devtools.
+## Requirements
 
-## Building
+- [VOICEVOX](https://voicevox.hiroshiba.jp/) (起動しておく)
+- PipeWire / PulseAudio
+- Twitch OAuth Token ([Twitch CLI](https://dev.twitch.tv/docs/cli/) で取得)
 
-To build a redistributable, production mode package, use `wails build`.
+## Build
+
+```bash
+# Wails CLI が必要
+go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+# 依存パッケージ (Arch/CachyOS)
+sudo pacman -S webkit2gtk
+
+# ビルド
+wails build
+./build/bin/twitch-tts
+```
+
+## Usage
+
+1. VOICEVOX を起動
+2. アプリを起動
+3. Channel 名と OAuth Token を入力して Connect
+4. OBS で「音声出力キャプチャ」→ `Twitch TTS` を選択
+
+自分のスピーカー/ヘッドホンにも自動でループバックされるので、
+読み上げ音声を聞きながら配信できる。
+
+## OAuth Token の取得
+
+```bash
+# Twitch CLI をインストール
+yay -S twitch-cli
+
+# Twitch Developer Console でアプリ登録後
+twitch configure
+twitch token -u -s 'chat:read'
+```
+
+## Config
+
+設定は `~/.config/twitch-tts/config.json` に保存される。
