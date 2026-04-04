@@ -4,3 +4,4 @@ frontend/dist
 frontend/wailsjs
 twitch-tts
 dist/
+*.md5
