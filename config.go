@@ -1,17 +1,18 @@
 package main
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
+
+	toml "github.com/pelletier/go-toml/v2"
 )
 
 type Config struct {
-	Channel    string `json:"channel"`
-	Token      string `json:"token"`
-	SpeakerID  int    `json:"speaker_id"`
-	ReadName   bool   `json:"read_name"`
-	NameSuffix string `json:"name_suffix"`
+	Channel    string `toml:"channel" json:"channel"`
+	Token      string `toml:"token" json:"token"`
+	SpeakerID  int    `toml:"speaker_id" json:"speaker_id"`
+	ReadName   bool   `toml:"read_name" json:"read_name"`
+	NameSuffix string `toml:"name_suffix" json:"name_suffix"`
 }
 
 func defaultConfig() Config {
@@ -24,7 +25,7 @@ func configPath() string {
 		home, _ := os.UserHomeDir()
 		dir = filepath.Join(home, ".config")
 	}
-	return filepath.Join(dir, "twitch-tts", "config.json")
+	return filepath.Join(dir, "twitch-tts", "config.toml")
 }
 
 func (a *App) LoadConfig() Config {
@@ -33,7 +34,7 @@ func (a *App) LoadConfig() Config {
 		return defaultConfig()
 	}
 	var cfg Config
-	if err := json.Unmarshal(data, &cfg); err != nil {
+	if err := toml.Unmarshal(data, &cfg); err != nil {
 		return defaultConfig()
 	}
 	return cfg
@@ -44,7 +45,7 @@ func (a *App) SaveConfig(cfg Config) error {
 	if err := os.MkdirAll(filepath.Dir(p), 0700); err != nil {
 		return err
 	}
-	data, err := json.MarshalIndent(cfg, "", "  ")
+	data, err := toml.Marshal(cfg)
 	if err != nil {
 		return err
 	}
