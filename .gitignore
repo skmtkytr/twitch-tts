@@ -1,7 +1,5 @@
-__pycache__/
-*.pyc
-*.egg-info/
-dist/
-build/
-.venv/
-.env
+build/bin
+node_modules
+frontend/dist
+frontend/wailsjs
+twitch-tts

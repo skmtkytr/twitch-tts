@@ -1,0 +1,11 @@
+html {
+    background-color: #1e1e2e;
+}
+
+body {
+    margin: 0;
+}
+
+#app {
+    height: 100vh;
+}
