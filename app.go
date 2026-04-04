@@ -12,14 +12,17 @@ import (
 )
 
 type App struct {
-	ctx       context.Context
-	voicevox  *VoicevoxClient
-	twitchCli *twitch.Client
-	ttsOn     bool
-	speakerID int
-	mu        sync.Mutex
-	ttsCh     chan ttsRequest
-	stopCh    chan struct{}
+	ctx        context.Context
+	voicevox   *VoicevoxClient
+	audio      *AudioRouter
+	twitchCli  *twitch.Client
+	ttsOn      bool
+	speakerID  int
+	readName   bool
+	nameSuffix string
+	mu         sync.Mutex
+	ttsCh      chan ttsRequest
+	stopCh     chan struct{}
 }
 
 type ttsRequest struct {
@@ -34,14 +37,25 @@ type ChatMessage struct {
 
 func NewApp() *App {
 	return &App{
-		voicevox:  NewVoicevoxClient(""),
-		ttsOn:     true,
-		speakerID: 1,
+		voicevox:   NewVoicevoxClient(""),
+		audio:      NewAudioRouter(),
+		ttsOn:      true,
+		speakerID:  1,
+		readName:   true,
+		nameSuffix: "さん",
 	}
 }
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	if err := a.audio.Setup(); err != nil {
+		log.Printf("audio setup warning: %v", err)
+	}
+}
+
+func (a *App) shutdown(ctx context.Context) {
+	a.Disconnect()
+	a.audio.Teardown()
 }
 
 func (a *App) GetSpeakers() ([]Speaker, error) {
@@ -58,6 +72,18 @@ func (a *App) SetTTSEnabled(on bool) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.ttsOn = on
+}
+
+func (a *App) SetReadName(on bool) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.readName = on
+}
+
+func (a *App) SetNameSuffix(suffix string) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.nameSuffix = suffix
 }
 
 func (a *App) Connect(channel, token string) error {
@@ -90,12 +116,18 @@ func (a *App) Connect(channel, token string) error {
 		a.mu.Lock()
 		ttsOn := a.ttsOn
 		speakerID := a.speakerID
+		readName := a.readName
+		nameSuffix := a.nameSuffix
 		a.mu.Unlock()
 
 		if ttsOn {
+			text := msg.Content
+			if readName {
+				text = msg.Author + nameSuffix + "。" + msg.Content
+			}
 			select {
 			case a.ttsCh <- ttsRequest{
-				Text:      msg.Author + "。" + msg.Content,
+				Text:      text,
 				SpeakerID: speakerID,
 			}:
 			default:
@@ -151,7 +183,7 @@ func (a *App) ttsWorker() {
 				log.Printf("synthesis error: %v", err)
 				continue
 			}
-			if err := PlayWav(wav); err != nil {
+			if err := PlayWav(wav, a.audio.SinkName()); err != nil {
 				log.Printf("playback error: %v", err)
 			}
 		}

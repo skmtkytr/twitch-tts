@@ -1,5 +1,5 @@
 <script>
-  import {Connect, Disconnect, GetSpeakers, SetSpeaker, SetTTSEnabled, LoadConfig, SaveConfig} from '../wailsjs/go/main/App.js'
+  import {Connect, Disconnect, GetSpeakers, SetSpeaker, SetTTSEnabled, SetReadName, SetNameSuffix, LoadConfig, SaveConfig} from '../wailsjs/go/main/App.js'
   import {EventsOn} from '../wailsjs/runtime/runtime.js'
 
   let channel = ''
@@ -11,12 +11,18 @@
   let speakers = []
   let selectedSpeaker = 1
   let ttsEnabled = true
+  let readName = true
+  let nameSuffix = 'さん'
 
   // Load config and speakers on mount
   LoadConfig().then(cfg => {
     channel = cfg.channel || ''
     token = cfg.token || ''
     if (cfg.speaker_id) selectedSpeaker = cfg.speaker_id
+    if (cfg.read_name !== undefined) readName = cfg.read_name
+    if (cfg.name_suffix !== undefined) nameSuffix = cfg.name_suffix
+    SetReadName(readName)
+    SetNameSuffix(nameSuffix)
   })
 
   GetSpeakers()
@@ -36,7 +42,7 @@
     connected = true
     connecting = false
     status = 'Connected'
-    SaveConfig({channel, token, speaker_id: selectedSpeaker})
+    SaveConfig({channel, token, speaker_id: selectedSpeaker, read_name: readName, name_suffix: nameSuffix})
   })
 
   EventsOn('disconnected', () => {
@@ -71,6 +77,14 @@
   function onTTSToggle() {
     SetTTSEnabled(ttsEnabled)
   }
+
+  function onReadNameToggle() {
+    SetReadName(readName)
+  }
+
+  function onNameSuffixChange() {
+    SetNameSuffix(nameSuffix)
+  }
 </script>
 
 <main>
@@ -100,6 +114,14 @@
     <label class="tts-toggle">
       <input type="checkbox" bind:checked={ttsEnabled} on:change={onTTSToggle} />
       TTS
+    </label>
+    <label class="tts-toggle">
+      <input type="checkbox" bind:checked={readName} on:change={onReadNameToggle} />
+      Name
+    </label>
+    <label>
+      Suffix
+      <input type="text" class="suffix-input" bind:value={nameSuffix} on:change={onNameSuffixChange} placeholder="さん" />
     </label>
   </div>
 
@@ -198,6 +220,16 @@
   .tts-toggle {
     font-size: 14px !important;
     font-weight: 600;
+  }
+
+  .suffix-input {
+    width: 50px;
+    padding: 3px 6px;
+    border: 1px solid #45475a;
+    border-radius: 6px;
+    background: #313244;
+    color: #cdd6f4;
+    font-size: 13px;
   }
 
   .chat-log {

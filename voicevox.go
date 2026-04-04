@@ -96,7 +96,7 @@ func (v *VoicevoxClient) Synthesize(text string, speakerID int) ([]byte, error) 
 	return io.ReadAll(synthResp.Body)
 }
 
-func PlayWav(wavData []byte) error {
+func PlayWav(wavData []byte, sinkName string) error {
 	f, err := os.CreateTemp("", "twitch-tts-*.wav")
 	if err != nil {
 		return err
@@ -109,7 +109,11 @@ func PlayWav(wavData []byte) error {
 	}
 	f.Close()
 
-	cmd := exec.Command("pw-play", f.Name())
+	args := []string{f.Name()}
+	if sinkName != "" {
+		args = []string{"--target", sinkName, f.Name()}
+	}
+	cmd := exec.Command("pw-play", args...)
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }

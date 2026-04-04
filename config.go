@@ -7,9 +7,15 @@ import (
 )
 
 type Config struct {
-	Channel   string `json:"channel"`
-	Token     string `json:"token"`
-	SpeakerID int    `json:"speaker_id"`
+	Channel    string `json:"channel"`
+	Token      string `json:"token"`
+	SpeakerID  int    `json:"speaker_id"`
+	ReadName   bool   `json:"read_name"`
+	NameSuffix string `json:"name_suffix"`
+}
+
+func defaultConfig() Config {
+	return Config{SpeakerID: 1, ReadName: true, NameSuffix: "さん"}
 }
 
 func configPath() string {
@@ -24,11 +30,11 @@ func configPath() string {
 func (a *App) LoadConfig() Config {
 	data, err := os.ReadFile(configPath())
 	if err != nil {
-		return Config{SpeakerID: 1}
+		return defaultConfig()
 	}
 	var cfg Config
 	if err := json.Unmarshal(data, &cfg); err != nil {
-		return Config{SpeakerID: 1}
+		return defaultConfig()
 	}
 	return cfg
 }
