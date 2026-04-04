@@ -2,6 +2,9 @@ package main
 
 import (
 	"embed"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -12,10 +15,17 @@ import (
 var assets embed.FS
 
 func main() {
-	// Create an instance of the app structure
 	app := NewApp()
 
-	// Create application with options
+	// Ensure cleanup on SIGINT/SIGTERM even if Wails doesn't call OnShutdown
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		app.audio.Teardown()
+		os.Exit(0)
+	}()
+
 	err := wails.Run(&options.App{
 		Title:  "Twitch TTS",
 		Width:  560,

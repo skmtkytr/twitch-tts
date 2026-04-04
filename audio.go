@@ -21,22 +21,14 @@ func NewAudioRouter() *AudioRouter {
 	return &AudioRouter{}
 }
 
-// Setup creates a virtual sink for TTS output and a loopback
-// so the user can also hear the TTS on their default output.
-// OBS captures "Twitch TTS" via Audio Output Capture.
+// Setup cleans up any leftover modules from a previous crash,
+// then creates a virtual sink and loopback.
 func (ar *AudioRouter) Setup() error {
-	// Check if sink already exists
-	out, err := exec.Command("pactl", "list", "short", "sinks").Output()
-	if err != nil {
-		return fmt.Errorf("pactl list sinks failed: %w", err)
-	}
-	if strings.Contains(string(out), sinkName) {
-		log.Println("audio: virtual sink already exists")
-		return nil
-	}
+	// Clean up orphaned modules from previous run (e.g. after SIGKILL)
+	ar.cleanupOrphaned()
 
 	// Create null sink (virtual output device)
-	out, err = exec.Command("pactl", "load-module", "module-null-sink",
+	out, err := exec.Command("pactl", "load-module", "module-null-sink",
 		fmt.Sprintf("sink_name=%s", sinkName),
 		fmt.Sprintf("sink_properties=device.description=\"%s\"", sinkDescription),
 	).Output()
@@ -59,6 +51,29 @@ func (ar *AudioRouter) Setup() error {
 	}
 
 	return nil
+}
+
+// cleanupOrphaned removes any leftover sink/loopback from a previous crash.
+func (ar *AudioRouter) cleanupOrphaned() {
+	out, err := exec.Command("pactl", "list", "short", "modules").Output()
+	if err != nil {
+		return
+	}
+	for _, line := range strings.Split(string(out), "\n") {
+		if !strings.Contains(line, sinkName) {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 1 {
+			continue
+		}
+		moduleID := fields[0]
+		if err := exec.Command("pactl", "unload-module", moduleID).Run(); err != nil {
+			log.Printf("audio: failed to remove orphaned module %s: %v", moduleID, err)
+		} else {
+			log.Printf("audio: removed orphaned module %s", moduleID)
+		}
+	}
 }
 
 // Teardown removes the virtual sink and loopback.
