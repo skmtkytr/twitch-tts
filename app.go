@@ -89,11 +89,8 @@ func (a *App) SetNameSuffix(suffix string) {
 func (a *App) Connect(channel, token string) error {
 	channel = strings.TrimSpace(channel)
 	token = strings.TrimSpace(token)
-	if channel == "" || token == "" {
-		return fmt.Errorf("channel and token are required")
-	}
-	if !strings.HasPrefix(token, "oauth:") {
-		token = "oauth:" + token
+	if channel == "" {
+		return fmt.Errorf("channel is required")
 	}
 
 	// Clean up previous connection
@@ -105,7 +102,16 @@ func (a *App) Connect(channel, token string) error {
 	// Start TTS worker
 	go a.ttsWorker()
 
-	client := twitch.NewClient(channel, token)
+	var client *twitch.Client
+	if token == "" {
+		// Anonymous read-only connection (no OAuth token needed)
+		client = twitch.NewAnonymousClient()
+	} else {
+		if !strings.HasPrefix(token, "oauth:") {
+			token = "oauth:" + token
+		}
+		client = twitch.NewClient(channel, token)
+	}
 	client.OnPrivateMessage(func(message twitch.PrivateMessage) {
 		msg := ChatMessage{
 			Author:  message.User.DisplayName,

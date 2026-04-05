@@ -55,8 +55,8 @@
     if (connected) {
       await Disconnect()
     } else {
-      if (!channel || !token) {
-        status = 'Channel and Token are required'
+      if (!channel) {
+        status = 'Channel is required'
         return
       }
       connecting = true
@@ -94,8 +94,8 @@
       <input type="text" bind:value={channel} placeholder="channel" disabled={connected} />
     </label>
     <label>
-      Token
-      <input type="password" bind:value={token} placeholder="oauth:xxxxx" disabled={connected} />
+      Token <span class="optional">(optional)</span>
+      <input type="password" bind:value={token} placeholder="未設定でも接続可" disabled={connected} />
     </label>
     <button on:click={toggleConnection} disabled={connecting}>
       {connected ? 'Disconnect' : 'Connect'}
@@ -172,6 +172,11 @@
     background: #313244;
     color: #cdd6f4;
     font-size: 14px;
+  }
+
+  .optional {
+    color: #6c7086;
+    font-weight: normal;
   }
 
   .connection button {
