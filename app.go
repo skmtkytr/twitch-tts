@@ -104,8 +104,8 @@ func (a *App) Connect(channel, token string) error {
 
 	var client *twitch.Client
 	if token == "" {
-		// Anonymous read-only connection (no OAuth token needed)
-		client = twitch.NewAnonymousClient()
+		// Anonymous read-only connection using justinfan nickname
+		client = twitch.NewClient("justinfan123123", "oauth:dummy")
 	} else {
 		if !strings.HasPrefix(token, "oauth:") {
 			token = "oauth:" + token

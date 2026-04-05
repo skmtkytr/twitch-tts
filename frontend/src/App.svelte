@@ -10,6 +10,7 @@
   let messages = []
   let speakers = []
   let selectedSpeaker = 1
+  let voicevoxOk = false
   let ttsEnabled = true
   let readName = true
   let nameSuffix = 'さん'
@@ -25,9 +26,18 @@
     SetNameSuffix(nameSuffix)
   })
 
-  GetSpeakers()
-    .then(s => { speakers = s || [] })
-    .catch(() => { status = 'VOICEVOX not running' })
+  function fetchSpeakers() {
+    return GetSpeakers()
+      .then(s => { speakers = s || []; voicevoxOk = speakers.length > 0 })
+      .catch(() => { speakers = []; voicevoxOk = false })
+  }
+
+  fetchSpeakers()
+
+  // Retry fetching speakers periodically while VOICEVOX is not available
+  const voicevoxTimer = setInterval(() => {
+    if (!voicevoxOk) fetchSpeakers()
+  }, 5000)
 
   EventsOn('chat-message', (msg) => {
     messages = [...messages, msg]
@@ -45,10 +55,10 @@
     SaveConfig({channel, token, speaker_id: selectedSpeaker, read_name: readName, name_suffix: nameSuffix})
   })
 
-  EventsOn('disconnected', () => {
+  EventsOn('disconnected', (err) => {
     connected = false
     connecting = false
-    status = 'Disconnected'
+    status = err ? 'Disconnected: ' + err : 'Disconnected'
   })
 
   async function toggleConnection() {
@@ -103,14 +113,18 @@
   </div>
 
   <div class="controls">
-    <label>
-      Speaker
-      <select bind:value={selectedSpeaker} on:change={onSpeakerChange}>
-        {#each speakers as s}
-          <option value={s.id}>{s.name}</option>
-        {/each}
-      </select>
-    </label>
+    {#if voicevoxOk}
+      <label>
+        Speaker
+        <select bind:value={selectedSpeaker} on:change={onSpeakerChange}>
+          {#each speakers as s}
+            <option value={s.id}>{s.name}</option>
+          {/each}
+        </select>
+      </label>
+    {:else}
+      <span class="voicevox-warn">VOICEVOX 未検出 — 起動すると自動で接続します</span>
+    {/if}
     <label class="tts-toggle">
       <input type="checkbox" bind:checked={ttsEnabled} on:change={onTTSToggle} />
       TTS
@@ -220,6 +234,12 @@
     background: #313244;
     color: #cdd6f4;
     font-size: 13px;
+  }
+
+  .voicevox-warn {
+    color: #fab387;
+    font-size: 12px;
+    font-weight: 600;
   }
 
   .tts-toggle {
