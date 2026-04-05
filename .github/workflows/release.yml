@@ -42,7 +42,7 @@ jobs:
           mkdir -p dist/twitch-tts
           cp build/bin/twitch-tts dist/twitch-tts/
           cp build/appicon.png dist/twitch-tts/
-          cp install.sh uninstall.sh README.md dist/twitch-tts/
+          cp install.sh uninstall.sh README.md LICENSE dist/twitch-tts/
           chmod +x dist/twitch-tts/install.sh dist/twitch-tts/uninstall.sh
           cd dist && tar czf twitch-tts-${VERSION}-linux-amd64.tar.gz twitch-tts
 
