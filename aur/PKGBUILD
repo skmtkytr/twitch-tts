@@ -12,7 +12,7 @@ optdepends=('pipewire: audio routing for OBS'
 provides=('twitch-tts')
 conflicts=('twitch-tts' 'twitch-tts-git')
 source=("${pkgname}-${pkgver}.tar.gz::https://github.com/skmtkytr/twitch-tts/releases/download/v${pkgver}/twitch-tts-v${pkgver}-linux-amd64.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('7059df974c0febe986acf8f98e68de89e0efa2808b0b3ab51c2743228b712dc6')
 
 package() {
     cd "$srcdir/twitch-tts"
