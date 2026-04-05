@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 	"sync"
 
@@ -16,6 +18,8 @@ type App struct {
 	voicevox   *VoicevoxClient
 	audio      *AudioRouter
 	twitchCli  *twitch.Client
+	channel    string
+	canWrite   bool
 	ttsOn      bool
 	speakerID  int
 	readName   bool
@@ -86,6 +90,38 @@ func (a *App) SetNameSuffix(suffix string) {
 	a.nameSuffix = suffix
 }
 
+// validateToken returns the login name associated with the OAuth token.
+func validateToken(token string) (string, error) {
+	req, err := http.NewRequest("GET", "https://id.twitch.tv/oauth2/validate", nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "OAuth "+strings.TrimPrefix(token, "oauth:"))
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to validate token: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("token validation failed (status %d)", resp.StatusCode)
+	}
+	var result struct {
+		Login string `json:"login"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", err
+	}
+	if result.Login == "" {
+		return "", fmt.Errorf("token validation returned empty login")
+	}
+	return result.Login, nil
+}
+
+// TwitchLogin starts the OAuth flow and returns the access token.
+func (a *App) TwitchLogin() (string, error) {
+	return StartOAuthFlow()
+}
+
 func (a *App) Connect(channel, token string) error {
 	channel = strings.TrimSpace(channel)
 	token = strings.TrimSpace(token)
@@ -103,14 +139,21 @@ func (a *App) Connect(channel, token string) error {
 	go a.ttsWorker()
 
 	var client *twitch.Client
-	if token == "" {
+	canWrite := token != ""
+	if !canWrite {
 		// Anonymous read-only connection using justinfan nickname
 		client = twitch.NewClient("justinfan123123", "oauth:dummy")
 	} else {
 		if !strings.HasPrefix(token, "oauth:") {
 			token = "oauth:" + token
 		}
-		client = twitch.NewClient(channel, token)
+		// Resolve the username from the token so messages are sent as the token owner
+		username, err := validateToken(token)
+		if err != nil {
+			return fmt.Errorf("invalid token: %w", err)
+		}
+		log.Printf("authenticated as: %s", username)
+		client = twitch.NewClient(username, token)
 	}
 	client.OnPrivateMessage(func(message twitch.PrivateMessage) {
 		msg := ChatMessage{
@@ -143,13 +186,15 @@ func (a *App) Connect(channel, token string) error {
 	})
 
 	client.OnConnect(func() {
-		runtime.EventsEmit(a.ctx, "connected", nil)
+		runtime.EventsEmit(a.ctx, "connected", canWrite)
 	})
 
 	client.Join(channel)
 
 	a.mu.Lock()
 	a.twitchCli = client
+	a.channel = channel
+	a.canWrite = canWrite
 	a.mu.Unlock()
 
 	go func() {
@@ -159,6 +204,27 @@ func (a *App) Connect(channel, token string) error {
 		}
 	}()
 
+	return nil
+}
+
+func (a *App) SendChat(message string) error {
+	message = strings.TrimSpace(message)
+	if message == "" {
+		return nil
+	}
+	a.mu.Lock()
+	client := a.twitchCli
+	channel := a.channel
+	canWrite := a.canWrite
+	a.mu.Unlock()
+
+	if client == nil {
+		return fmt.Errorf("not connected")
+	}
+	if !canWrite {
+		return fmt.Errorf("anonymous connection cannot send messages")
+	}
+	client.Say(channel, message)
 	return nil
 }
 

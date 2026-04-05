@@ -51,17 +51,15 @@ make install
 
 ## OAuth Token（オプション）
 
-Token がなくてもチャットの読み取りは可能（匿名接続）。
-チャットへの書き込みが必要な場合のみ Token を設定する。
+Token がなくてもチャットの読み取り・読み上げは可能（匿名接続）。
+自分のアカウントでチャットに書き込みたい場合のみ Token を設定する。
 
-```bash
-# Twitch CLI をインストール
-yay -S twitch-cli
+Token は自分の Twitch アカウントで発行するだけでOK。
+Bot アプリの登録や Twitch CLI は不要。
 
-# Twitch Developer Console でアプリ登録後
-twitch configure
-twitch token -u -s 'chat:read'
-```
+1. https://twitchtokengenerator.com/ にアクセス
+2. スコープ `chat:read` と `chat:edit` を選択して Token を生成
+3. アプリの Token 欄に貼り付ける
 
 ## Config
 
